@@ -6,10 +6,10 @@ typedef struct{
   int top;
   int elementSize;
   
-  void *s;
+  void **s;
 }stack;
 
-int stackInit(stack *instance, void *array, int arraylen, int elementSize);
+int stackInit(stack *instance, void *array, int arraylen);
 void *pop(stack *instance);
 void *peek(stack *instance);
 void push(void *n, stack *instance);

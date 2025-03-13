@@ -4,7 +4,7 @@ int queueInit(queue *instance){
   instance->capacity = 1024;
   instance->front = 0;
   instance->back = 0;
-  instance->q = malloc(sizeof(int)*instance->capacity);
+  instance->q = malloc(sizeof(void *)*instance->capacity);
   if(!instance->q){
     puts("buy more ram");
     return -1;
@@ -13,7 +13,7 @@ int queueInit(queue *instance){
 }
 
 static void resize(queue *instance){
-  uiElement *newq = malloc(instance->capacity*2*sizeof(uiElement));
+  void **newq = malloc(instance->capacity*2*sizeof(void *));
   if(!newq){
     puts("failed queue resize");
   }
@@ -27,7 +27,7 @@ static void resize(queue *instance){
   instance->q = newq;
 }
 
-void enqueue(uiElement n, queue *instance){
+void enqueue(void *n, queue *instance){
   instance->q[instance->back] = n;
   instance->back = (instance->back+1)%instance->capacity;
   if(instance->back == instance->front){
@@ -35,8 +35,8 @@ void enqueue(uiElement n, queue *instance){
   }
 }
 
-uiElement dequeue(queue *instance){
-  uiElement ret;
+void *dequeue(queue *instance){
+  void *ret;
   ret = instance->q[instance->front];
   instance->front = (instance->front+1)%instance->capacity;
   return ret;

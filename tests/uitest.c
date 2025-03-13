@@ -1,17 +1,24 @@
 #include <raylib.h>
 #include "../include/ui.h"
+#include <stdio.h>
 
 int windowWidth = 800;
 int windowHeight = 600;
 
 int main(){
+  uiElement root = {0};
+  root = (uiElement){
+    .bounds.width = windowWidth,
+    .bounds.height = windowHeight
+  };
   uiElement test = (uiElement){
     .type = UI_NONE,
     .children = 0,
     .numberOfChildren = 0,
     .elementInItself = 0,
-    .bounds = (Rectangle){.x = 100, .y = 100, .width = 100, .height = 100},
-    .relativeAccum= (Vector2){.x = 0, .y = 0}
+    .bounds = (Rectangle){.x = 200, .y = 300, .width = 100, .height = 150},
+    .relativeAccum= (Vector2){.x = 0, .y = 0},
+    .horizontallyScrollable = true
   };
   uiElement test2 = (uiElement){
     .type = UI_NONE,
@@ -29,21 +36,38 @@ int main(){
     .bounds = (Rectangle){.x = 20, .y = 10, .width = 10, .height = 10},
     .relativeAccum= (Vector2){.x = 0, .y = 0}
   };
+  uiElement test4 = (uiElement){
+    .type = UI_TEXT,
+    .children = 0,
+    .numberOfChildren = 0,
+    .elementInItself = (uiText){.text = "hello world"},
+    .bounds = (Rectangle){.x = 30, .y = 10, .width = test.bounds.width-30, .height = test.bounds.height-10},
+    .relativeAccum= (Vector2){.x = 0, .y = 0}
+  };
   InitWindow(windowWidth, windowHeight, "UI test");
   SetTargetFPS(60);
-  initUI();
+  initUI(root, windowWidth, windowHeight);
   openContext();
-  attach(test);
-  openContext();
-  attach(test2);
-  attach(test3);
+    attach(&test);
+    openContext();
+      attach(&test2);
+      attach(&test3);
+      attach(&test4);
+    closeContext();
   closeContext();
-  closeContext();
-  rootAttach();
+  //closeContext();
+  uiElement *tree;
+  tree = rootAttach();
+  printf("returned pointer %p\n", tree);
 
   while (!WindowShouldClose()){
+    if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+      test.bounds.x = GetMouseX();
+      test.bounds.y = GetMouseY();
+    }
     BeginDrawing();
-    uiDrawUI();
+    ClearBackground(BLACK);
+    uiDrawUI(tree);
     EndDrawing();
   }
   CloseWindow();

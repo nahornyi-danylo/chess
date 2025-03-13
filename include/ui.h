@@ -2,38 +2,18 @@
 
 #ifndef UI_HEADER
 #define UI_HEADER
-typedef struct {
+typedef struct{
   float x;
   float y;
   float height;
   float width;
 }RectangleNorm;
 
-typedef enum {
+typedef enum{
   UI_NONE = 0,
+  UI_TEXT,
   UI_BUTTON
 }uiElementType;
-
-typedef struct uiElement_{
-  Rectangle bounds;
-  // normalized in range 0 to 1, with center in top left corner
-  RectangleNorm boundsNorm;
-  Vector2 relativeAccum;
-
-  // so it will be a switchcase probably
-  // can't come up with anything better at the moment
-  uiElementType type;
-  void *elementInItself;
-
-  int numberOfChildren;
-  struct uiElement_ *children;
-}uiElement;
-
-typedef struct{
-  int offset;
-  int childrenCount;
-
-}contextInfo;
 
 typedef struct{
   bool isHovered;
@@ -46,13 +26,47 @@ typedef struct{
   void (*callback)(void);
 }uiButton;
 
+typedef struct{
+  char *text;
+}uiText;
+
+typedef struct uiElement_{
+  Rectangle bounds;
+  Vector2 currentView;
+
+  // normalized in range 0 to 1, with center in top left corner
+  RectangleNorm boundsNorm;
+  Vector2 relativeAccum;
+
+  uiElementType type;
+  union{
+    uiText text;
+    uiButton button;
+  }elementInItself;
+
+  bool horizontallyScrollable;
+  bool verticallyScrollable;
+
+  int numberOfChildren;
+  struct uiElement_ **children;
+
+  struct uiElement_ *parent;
+}uiElement;
+
+typedef struct{
+  int offset;
+  int childrenCount;
+
+}contextInfo;
+
+
 // function protorypes
-void initUI();
-void attach(uiElement element);
+void initUI(uiElement rootEl, int width, int height);
+void attach(uiElement *element);
 void openContext();
 void closeContext();
 uiElement uiMakeButton();
-void uiDrawUI();
+void uiDrawUI(uiElement *uitree);
 void uiDestroyUI();
-void rootAttach();
+uiElement *rootAttach();
 #endif

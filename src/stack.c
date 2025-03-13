@@ -1,43 +1,36 @@
 #include "../include/stack.h"
+#define LOG_PREFIX "[stack]"
+#include "../include/common.h"
 
 static void resize(stack *instance){
   instance->capacity*=2;
-  instance->s = realloc(instance->s, sizeof(int)*instance->capacity);
+  instance->s = realloc(instance->s, sizeof(void *)*instance->capacity);
   if(!instance->s){
-    puts("stack reallocation failed");
+    LOG("stack reallocation failed");
   }
 }
 
 void push(void *n, stack *instance){
-  for(int i = 0; i<instance->elementSize; i++){
-    ((unsigned char *)instance->s)[instance->top+i] = ((unsigned char *)n)[i];
-  }
-  instance->top+=instance->elementSize;
-  if(instance->top == instance->capacity)resize(instance);
+  instance->s[instance->top] = n;
+  instance->top++;
+  LOG("pushed %p\n", n);
+  if(instance->top == instance->capacity) resize(instance);
 }
 
 void *pop(stack *instance){
-  instance->top-=instance->elementSize;
-  void *new = malloc(instance->elementSize);
-  if(!new){
-    puts("allocation on pop failed");
-    return NULL;
-  }
-  for(int i = 0; i<instance->elementSize; i++){
-    ((unsigned char *)new)[i] = ((unsigned char *)instance->s)[instance->top+i];
-  }
-  return new;
+  instance->top--;
+  LOG("popped %p\n", instance->s[instance->top]);
+  return instance->s[instance->top];
 }
 
 void *peek(stack *instance){
-  unsigned char *res = instance->s;
-  return (void *)&res[instance->top-instance->elementSize];
+  LOG("peeked %p\n", instance->s[instance->top-1]);
+  return instance->s[instance->top-1];
 }
 
-int stackInit(stack *instance, void *array, int arraylen, int elementSize){
-  instance->capacity = elementSize * arraylen;
+int stackInit(stack *instance, void *array, int arraylen){
+  instance->capacity = arraylen;
   instance->top = 0;
-  instance->elementSize = elementSize;
   instance->s = array;
   if(!instance->s){
     puts("Passed a null pointer");

@@ -2,41 +2,36 @@
 #include  "../include/stack.h"
 #include "../include/queue.h"
 
+#define LOG_PREFIX "[UI] "
+#include "../include/common.h"
+
 
 //TODO: add some logging system
 // In the main function after InitWinfow() happens user is supposed to set
 // the aproppriate veriables and call initUI()
 // TODO: generalize this all
-extern int windowWidth;
-extern int windowHeight;
+static int windowWidth;
+static int windowHeight;
 
-uiElement root = {0};
-contextInfo rootContext = {0};
+uiElement *root;
+contextInfo *rootContext;
 static stack context;
 static stack elements;
 
-void initUI(){
-  root = (uiElement){
-    .boundsNorm = (RectangleNorm){
-      .x      = 0.0,
-      .y      = 0.0,
-      .height = 1.0,
-      .width  = 1.0
-    },
-    .bounds = (Rectangle){
-      .x      = 0,
-      .y      = 0,
-      .height = windowHeight,
-      .width  = windowWidth
-    }
-    // everything else is already zeroed
-  };
+void initUI(uiElement rootEl, int width, int height){
+  root = malloc(sizeof(uiElement));
+  LOG("init at %p\n", root);
+  rootContext = malloc(sizeof(contextInfo));
+  *root = rootEl;
+  *rootContext = (contextInfo){0};
+  windowWidth = width;
+  windowHeight = height;
   contextInfo *contArray = malloc(10*sizeof(contextInfo));
-  stackInit(&context, contArray, 10, sizeof(contextInfo));
+  stackInit(&context, contArray, 10);
   uiElement *elementArray = malloc(20*sizeof(uiElement));
-  stackInit(&elements, elementArray, 20, sizeof(uiElement));
-  push(&rootContext, &context);
-  push(&root, &elements);
+  stackInit(&elements, elementArray, 20);
+  push(rootContext, &context);
+  push(root, &elements);
 }
 /* supposed usage:
  * openContext();
@@ -54,72 +49,117 @@ void initUI(){
 
 void openContext(){
   contextInfo *lastContext = NULL;
-  if(context.top > sizeof(contextInfo)){
+  if(context.top > 0){
     lastContext = peek(&context);
   }
-  push(&(contextInfo){
-        .childrenCount = 0, 
-        .offset = !lastContext?0:lastContext->offset+lastContext->childrenCount
-      }, &context);
+  contextInfo *newContext = malloc(sizeof(contextInfo));
+  if(!newContext){
+    LOG("!CRITICAL context allocation failed\n");
+    exit(1);
+  }
+  newContext->childrenCount = 0;
+  newContext->offset = !lastContext?0:lastContext->offset+lastContext->childrenCount;
+  push(newContext, &context);
 }
 
 void closeContext(){
-  contextInfo *lastContext = pop(&context);
-  if(lastContext->childrenCount){
-    uiElement *children;
-    children = malloc(lastContext->childrenCount * sizeof(uiElement));
-    if(!children){
-      printf("allocation failed");
-      goto failed;
+  if(context.top > 0){
+    contextInfo *lastContext = pop(&context);
+    LOG("offset %d\n", lastContext->offset);
+
+
+    if(lastContext->childrenCount){
+      uiElement **children = malloc(lastContext->childrenCount * sizeof(uiElement *));
+      //LOG("offset %d\n", lastContext->offset);
+      if(!children){
+        LOG("!CRITICAL context allocation failed\n");
+        exit(1);
+      }
+      for(int i = 0; i<lastContext->childrenCount; i++){
+        uiElement *child = pop(&elements);
+        children[i] = child;
+      }
+      LOG("%d\n", elements.top);
+      uiElement *parent = peek(&elements);
+      LOG("%d\n", lastContext->childrenCount);
+
+
+      parent->numberOfChildren = lastContext->childrenCount;
+      parent->children = children;
+      LOG("HERE\n");
+    LOG("attached to %p childrenCount %d\n", parent, parent->numberOfChildren);
     }
-    for(int i = 0; i<lastContext->childrenCount; i++){
-      uiElement *child = pop(&elements);
-      children[i] = *child;
-      free(child);
-    }
-    uiElement *parent = peek(&elements);
-    parent->numberOfChildren = lastContext->childrenCount;
-    parent->children = children;
+    LOG("context closed\n");
+    free(lastContext);
   }
-failed:
-  free(lastContext);
-  puts("context closed");
 }
 
-void attach(uiElement element){
+void attach(uiElement *element){
   contextInfo *lastContext = peek(&context);
   lastContext->childrenCount++;
-  uiElement *parent = &((uiElement *)elements.s)[lastContext->offset];
-  element.relativeAccum.x = parent->relativeAccum.x + parent->bounds.x;
-  element.relativeAccum.y = parent->relativeAccum.y + parent->bounds.y;
-  printf("parent acc %f %f\n", parent->relativeAccum.x, parent->relativeAccum.y);
-  printf("child topleft %f %f\n", element.bounds.x, element.bounds.y);
-  push(&element, &elements);
-  puts("element attached");
+  uiElement *parent = elements.s[lastContext->offset];
+  element->relativeAccum.x = parent->relativeAccum.x + parent->bounds.x;
+  element->relativeAccum.y = parent->relativeAccum.y + parent->bounds.y;
+  element->parent = parent;
+
+  LOG("parent acc %f %f\n", parent->relativeAccum.x, parent->relativeAccum.y);
+  LOG("parent adress %p\n", parent);
+  LOG("child topleft %f %f\n", element->bounds.x, element->bounds.y);
+
+  push(element, &elements);
+
+  LOG("element attached\n");
 }
 
-void rootAttach(){
-  uiElement *tmp = pop(&elements);
-  root = *tmp;
+uiElement *rootAttach(){
+  //uiElement *tmp = pop(&elements);
+  //root = *tmp;
+  free(pop(&context));
+  return root;
 }
 
 // TODO: Collapse the BFS queue into a linear array, so that the BFS needs to be
 // ran just once per UI scheme
-void uiDrawUI(){
+// TODO: Clean this up obviously
+void uiDrawUI(uiElement *uitree){
   queue uiDrawq;
   queueInit(&uiDrawq);
-  uiElement current;
-  enqueue(root, &uiDrawq);
+  uiElement *current;
+  enqueue(uitree, &uiDrawq);
 again:
   current = dequeue(&uiDrawq);
-  for(int i = 0; i<current.numberOfChildren; i++){
-    enqueue(current.children[i], &uiDrawq);
+  for(int i = 0; i<current->numberOfChildren; i++){
+    enqueue(current->children[i], &uiDrawq);
   }
-  switch(current.type){
+  float textSizeAccum;
+  GlyphInfo info;
+  Font f = GetFontDefault();
+  Vector2 offset = (Vector2){
+    .x = current->parent?current->parent->bounds.x:0,
+    .y = current->parent?current->parent->bounds.y:0
+  };
+  switch(current->type){
     case UI_NONE:
       //printf("current topleft %f %f\n", current.bounds.x, current.bounds.y);
       //printf("current acc %f %f\n", current.relativeAccum.x, current.relativeAccum.y);
-      DrawRectangleLines(current.bounds.x+current.relativeAccum.x, current.bounds.y+current.relativeAccum.y, current.bounds.width, current.bounds.height, RED);
+      DrawRectangleLines(current->bounds.x + offset.x,
+                         current->bounds.y + offset.y,
+                         current->bounds.width, current->bounds.height, RED);
+      break;
+    case UI_TEXT:
+      textSizeAccum = 0;
+      for(int i = 0; current->bounds.x + textSizeAccum < current->bounds.x + current->bounds.width; i++){
+        info = GetGlyphInfo(f, current->elementInItself.text.text[i]);
+        DrawTextCodepoint(f, current->elementInItself.text.text[i], (Vector2){current->bounds.x + offset.x + textSizeAccum + f.glyphPadding, current->bounds.y + offset.y}, 20, GREEN);
+        textSizeAccum += info.image.width*(20.0f/f.baseSize) + 1;
+        if(!current->elementInItself.text.text[i+1]) break;
+        //LOG("offset: %d\n", info.image.width);
+        //LOG("glyph: %c\n", info.value);
+        //LOG("glyphPad: %d\n", f.glyphPadding);
+        //LOG("textSizeAccum %d\n", textSizeAccum);
+
+      }
+      //DrawText(current.elementInItself.text.text, current.bounds.x + current.relativeAccum.x, current.bounds.y + current.relativeAccum.y, 20, GREEN);
       break;
     case UI_BUTTON:
       break;

@@ -7,10 +7,10 @@ typedef struct{
   int front;
   int back;
   
-  uiElement *q;
+  void **q;
 }queue;
 
 int queueInit(queue *instance);
-void enqueue(uiElement n, queue *instance);
-uiElement dequeue(queue *instance);
+void enqueue(void *n, queue *instance);
+void *dequeue(queue *instance);
 
