@@ -1,5 +1,6 @@
 #include "../include/stack.h"
-#define LOG_PREFIX "[stack]"
+
+#define LOG_PREFIX "[stack] "
 #include "../include/common.h"
 
 static void resize(stack *instance){

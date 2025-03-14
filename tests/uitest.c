@@ -46,7 +46,7 @@ int main(){
   };
   InitWindow(windowWidth, windowHeight, "UI test");
   SetTargetFPS(60);
-  initUI(root, windowWidth, windowHeight);
+  initUI(&root, windowWidth, windowHeight);
   openContext();
     attach(&test);
     openContext();

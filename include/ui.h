@@ -27,6 +27,10 @@ typedef struct{
 }uiButton;
 
 typedef struct{
+  Font font;
+  GlyphInfo info;
+  float sizeScalingFactor;
+
   char *text;
 }uiText;
 
@@ -61,7 +65,7 @@ typedef struct{
 
 
 // function protorypes
-void initUI(uiElement rootEl, int width, int height);
+void initUI(uiElement *root, int width, int height);
 void attach(uiElement *element);
 void openContext();
 void closeContext();
