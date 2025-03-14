@@ -57,6 +57,15 @@ typedef struct uiElement_{
   struct uiElement_ *parent;
 }uiElement;
 
+// tree representation for mouse hit testing and such
+// linear representation so as not to call BFS on the full tree each draw call
+typedef struct{
+  uiElement *tree;
+
+  int elementCount;
+  uiElement **linear;
+}uiScheme;
+
 typedef struct{
   int offset;
   int childrenCount;
@@ -66,11 +75,11 @@ typedef struct{
 
 // function protorypes
 void initUI(uiElement *root, int width, int height);
-void attach(uiElement *element);
-void openContext();
-void closeContext();
+void uiAttach(uiElement *element);
+void uiOpenContext();
+void uiCloseContext();
 uiElement uiMakeButton();
-void uiDrawUI(uiElement *uitree);
+void uiDrawUI(uiScheme scheme);
 void uiDestroyUI();
-uiElement *rootAttach();
+uiScheme uiFinailzeUI();
 #endif

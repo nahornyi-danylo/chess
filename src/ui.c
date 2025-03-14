@@ -41,7 +41,7 @@ void initUI(uiElement *root, int width, int height){
  */
 
 // TODO: handle incorrect call syntax
-void openContext(){
+void uiOpenContext(){
   contextInfo *lastContext = NULL;
   contextInfo *newContext;
 
@@ -61,7 +61,7 @@ void openContext(){
   push(newContext, &context);
 }
 
-void closeContext(){
+void uiCloseContext(){
   if(!context.top){
     LOG("No context to close\n");
     return;
@@ -90,7 +90,7 @@ void closeContext(){
   free(lastContext);
 }
 
-void attach(uiElement *element){
+void uiAttach(uiElement *element){
   if(!context.top){
     LOG("No context to attach to\n");
     return;
@@ -108,24 +108,50 @@ void attach(uiElement *element){
   LOG("element attached\n");
 }
 
+uiScheme uiFinailzeUI(){
+  uiScheme scheme = {0};
+
+  scheme.tree = pop(&elements);
+  uiElement *current = scheme.tree;
+  free(pop(&context));
+
+  queue q;
+  // I don't want to implement a standalone dynamic array right now, and it's basically the same
+  // the pupropse is that I need to dequeue for BFS, and store it in another dyn array
+  queue q2;
+  queueInit(&q);
+  queueInit(&q2);
+  
+  enqueue(current, &q);
+  enqueue(current, &q2);
+  
+  int count = 1;
+  while(q.front != q.back){
+    current = dequeue(&q);
+
+    for(int i = 0; i<current->numberOfChildren; i++){
+      enqueue(current->children[i], &q);
+      enqueue(current->children[i], &q2);
+      count++;
+    }
+  }
+  // the scheme now owns the pointer to that second queue
+  scheme.elementCount = count;
+  scheme.linear = (uiElement **)q2.q;
+  free(q.q);
+  LOG("ui finalized\n");
+  return scheme;
+}
 
 // TODO: Collapse the BFS queue into a linear array, so that the BFS needs to be
 // ran just once per UI scheme
 // TODO: Clean this up obviously
-void uiDrawUI(uiElement *uitree){
-  queue uiDrawq;
-  uiElement *current;
+void uiDrawUI(uiScheme scheme){
   Vector2 offset;
-  queueInit(&uiDrawq);
+  uiElement *current;
 
-  enqueue(uitree, &uiDrawq);
-
-  while(uiDrawq.front != uiDrawq.back){
-    current = dequeue(&uiDrawq);
-
-    for(int i = 0; i<current->numberOfChildren; i++){
-      enqueue(current->children[i], &uiDrawq);
-    }
+  for(int i = 0; i<scheme.elementCount; i++){
+    current = scheme.linear[i];
     //will be removed
     float textSizeAccum;
     GlyphInfo info;

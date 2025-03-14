@@ -47,18 +47,20 @@ int main(){
   InitWindow(windowWidth, windowHeight, "UI test");
   SetTargetFPS(60);
   initUI(&root, windowWidth, windowHeight);
-  openContext();
-    attach(&test);
-    openContext();
-      attach(&test2);
-      attach(&test3);
-      attach(&test4);
-    closeContext();
-  closeContext();
+  uiOpenContext();
+    uiAttach(&test);
+    uiOpenContext();
+      uiAttach(&test2);
+      uiAttach(&test3);
+      uiAttach(&test4);
+    uiCloseContext();
+  uiCloseContext();
+
+  uiScheme ui = uiFinailzeUI();
   //closeContext();
-  uiElement *tree;
-  tree = rootAttach();
-  printf("returned pointer %p\n", tree);
+  //uiElement *tree;
+  //tree = rootAttach();
+  //printf("returned pointer %p\n", tree);
 
   while (!WindowShouldClose()){
     if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
@@ -67,7 +69,7 @@ int main(){
     }
     BeginDrawing();
     ClearBackground(BLACK);
-    uiDrawUI(tree);
+    uiDrawUI(ui);
     EndDrawing();
   }
   CloseWindow();
