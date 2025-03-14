@@ -185,6 +185,27 @@ void uiDrawUI(uiScheme scheme){
   }
 }
 
+// should be all
+void uiDestroyUI(uiScheme scheme){
+  uiElement *current = scheme.tree;
+  queue q;
+  queueInit(&q);
 
+  enqueue(current, &q);
+  while(q.back != q.front){
+    current = dequeue(&q);
+    for(int i = 0; i<current->numberOfChildren; i++){
+      enqueue(current->children[i], &q);
+    }
+    //the whole reason for BFSing all over again
+    free(current->children);
+  }
+  free(q.q);
+  free(scheme.linear);
+  free(elements.s);
+  free(context.s);
+
+  LOG("ui destroyed successfully\n");
+}
 
 

@@ -73,4 +73,5 @@ int main(){
     EndDrawing();
   }
   CloseWindow();
+  uiDestroyUI(ui);
 }

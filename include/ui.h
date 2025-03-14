@@ -80,6 +80,6 @@ void uiOpenContext();
 void uiCloseContext();
 uiElement uiMakeButton();
 void uiDrawUI(uiScheme scheme);
-void uiDestroyUI();
+void uiDestroyUI(uiScheme scheme);
 uiScheme uiFinailzeUI();
 #endif
