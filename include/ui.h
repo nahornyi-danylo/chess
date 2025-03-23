@@ -2,12 +2,6 @@
 
 #ifndef UI_HEADER
 #define UI_HEADER
-typedef struct{
-  float x;
-  float y;
-  float height;
-  float width;
-}RectangleNorm;
 
 typedef enum{
   UI_NONE = 0,
@@ -28,26 +22,30 @@ typedef struct{
 
 typedef struct{
   Font font;
-  GlyphInfo info;
-  float sizeScalingFactor;
+  Color color;
+  float fontSize;
 
   char *text;
 }uiText;
 
 typedef struct uiElement_{
-  Rectangle bounds;
+  // Might look messy in code but still... and relative position can be infered
+  // from parent if need be
+  Vector2 positionAbsolute;
   Vector2 currentView;
+  Vector2 size;
 
-  // normalized in range 0 to 1, with center in top left corner
-  RectangleNorm boundsNorm;
-  Vector2 relativeAccum;
+  // normalized in range 0 to 1, with center in top left corner unused for now
+  Rectangle boundsNorm;
 
+  // still keeping this for potential use in resizes and such
   uiElementType type;
   union{
     uiText text;
     uiButton button;
   }elementInItself;
-
+  
+  // TBD 
   bool horizontallyScrollable;
   bool verticallyScrollable;
 
@@ -55,6 +53,9 @@ typedef struct uiElement_{
   struct uiElement_ **children;
 
   struct uiElement_ *parent;
+
+  // BEHOLD! A METHOD IN C!!
+  void (*draw)(struct uiElement_ *);
 }uiElement;
 
 // tree representation for mouse hit testing and such
@@ -72,6 +73,7 @@ typedef struct{
 
 }contextInfo;
 
+#endif
 
 // function protorypes
 void initUI(uiElement *root, int width, int height);
@@ -82,4 +84,6 @@ uiElement uiMakeButton();
 void uiDrawUI(uiScheme scheme);
 void uiDestroyUI(uiScheme scheme);
 uiScheme uiFinailzeUI();
-#endif
+
+uiElement *uiGetNone(Rectangle bounds);
+uiElement *uiGetText(Vector2 position, char *text, float fontSize, Color color);
