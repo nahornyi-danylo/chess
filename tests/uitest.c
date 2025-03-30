@@ -1,5 +1,7 @@
 #include <raylib.h>
 #include "../include/ui.h"
+#define LOG_PREFIX "uitest"
+#include "../include/common.h"
 #include <stdio.h>
 
 int windowWidth = 800;
@@ -35,11 +37,11 @@ int main(){
           uiDrawUI(ui);
           mwheel = GetMouseWheelMoveV();
           if(text->currentView.x != mwheel.x * 10){
-            printf("%f\n", mwheel.x);
             text->currentView.x += mwheel.x * 10;
           }
         EndDrawing();
   }
   CloseWindow();
   uiDestroyUI(ui);
+  LOG("alloc summary:\nallocations %d\nfrees %d\n", allocCounter, freeCounter);
 }

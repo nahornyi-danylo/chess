@@ -1,26 +1,22 @@
 #include "../include/queue.h"
+#include "../include/common.h"
 
 int queueInit(queue *instance){
   instance->capacity = 1024;
   instance->front = 0;
   instance->back = 0;
-  instance->q = malloc(sizeof(void *)*instance->capacity);
-  if(!instance->q){
-    puts("buy more ram");
-    return -1;
-  }
+  instance->q = bestow(sizeof(void *)*instance->capacity);
+
   return 0;
 }
 
 static void resize(queue *instance){
-  void **newq = malloc(instance->capacity*2*sizeof(void *));
-  if(!newq){
-    puts("failed queue resize");
-  }
+  void **newq = bestow(instance->capacity*2*sizeof(void *));
+
   for(int i = 0; i<instance->capacity; i++){
     newq[i] = instance->q[(instance->front+i)%instance->capacity];
   }
-  free(instance->q);
+  relinquish(instance->q);
   instance->back = instance->capacity;
   instance->front = 0;
   instance->capacity*=2;

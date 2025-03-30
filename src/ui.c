@@ -2,7 +2,7 @@
 #include  "../include/stack.h"
 #include "../include/queue.h"
 
-#define LOG_PREFIX "[UI] "
+#define LOG_PREFIX "UI"
 #include "../include/common.h"
 
 
@@ -21,11 +21,11 @@ static inline Vector2 add2Vec2(Vector2 one, Vector2 two){
 }
 
 void initUI(uiElement *root, int width, int height){
-  contextInfo *rootContext = malloc(sizeof(contextInfo));
+  contextInfo *rootContext = bestow(sizeof(contextInfo));
   *rootContext = (contextInfo){0};
 
-  contextInfo *contArray = malloc(10*sizeof(contextInfo));
-  uiElement *elementArray = malloc(20*sizeof(uiElement));
+  contextInfo *contArray = bestow(10*sizeof(contextInfo));
+  uiElement *elementArray = bestow(20*sizeof(uiElement));
 
   stackInit(&context, contArray, 10);
   stackInit(&elements, elementArray, 20);
@@ -57,13 +57,8 @@ void uiOpenContext(){
   if(context.top > 0){
     lastContext = peek(&context);
   }
-  newContext = malloc(sizeof(contextInfo));
 
-  if(!newContext){
-    LOG("!CRITICAL context allocation failed\n");
-    exit(1);
-  }
-
+  newContext = bestow(sizeof(contextInfo));
   newContext->childrenCount = 0;
   newContext->offset = !lastContext?0:lastContext->offset+lastContext->childrenCount;
 
@@ -78,12 +73,7 @@ void uiCloseContext(){
   contextInfo *lastContext = pop(&context);
 
   if(lastContext->childrenCount){
-    uiElement **children = malloc(lastContext->childrenCount * sizeof(uiElement *));
-
-    if(!children){
-      LOG("!CRITICAL context allocation failed\n");
-      exit(1);
-    }
+    uiElement **children = bestow(lastContext->childrenCount * sizeof(uiElement *));
 
     for(int i = 0; i<lastContext->childrenCount; i++){
       uiElement *child = pop(&elements);
@@ -96,7 +86,7 @@ void uiCloseContext(){
   }
   LOG("context closed\n");
 
-  free(lastContext);
+  relinquish(lastContext);
 }
 
 // TODO handle out-of-bounds behavior (scrollbars/cutoff)
@@ -123,7 +113,7 @@ uiScheme uiFinailzeUI(){
 
   scheme.tree = pop(&elements);
   uiElement *current = scheme.tree;
-  free(pop(&context));
+  relinquish(pop(&context));
 
   queue q;
   // I don't want to implement a standalone dynamic array right now, and it's basically the same
@@ -148,7 +138,7 @@ uiScheme uiFinailzeUI(){
   // the scheme now owns the pointer to that second queue
   scheme.elementCount = count;
   scheme.linear = (uiElement **)q2.q;
-  free(q.q);
+  relinquish(q.q);
   LOG("ui finalized\n");
   return scheme;
 }
@@ -182,15 +172,15 @@ void uiDestroyUI(uiScheme scheme){
       enqueue(current->children[i], &q);
     }
     //the whole reason for BFSing all over again
-    free(current->children);
+    if(current->children) relinquish(current->children);
   }
   for(int i = 0; i<scheme.elementCount; i++){
-    free(scheme.linear[i]);
+    relinquish(scheme.linear[i]);
   }
-  free(q.q);
-  free(scheme.linear);
-  free(elements.s);
-  free(context.s);
+  relinquish(q.q);
+  relinquish(scheme.linear);
+  relinquish(elements.s);
+  relinquish(context.s);
 
   LOG("ui destroyed successfully\n");
 }
@@ -207,12 +197,7 @@ static void uiDrawNONE(uiElement *element){
 }
 
 uiElement *uiGetNone(Rectangle bounds){
-  uiElement *result = malloc(sizeof(uiElement));
-  if(!result){
-    LOG("element NONE allocation failed");
-    exit(1);
-  
-  }
+  uiElement *result = bestow(sizeof(uiElement));
   *result = (uiElement){0};
   *result = (uiElement){
     .positionAbsolute.x = bounds.x,
@@ -302,12 +287,7 @@ static void uiDrawTEXT(uiElement *element){
 }
 
 uiElement *uiGetText(Vector2 position, char *text, float fontSize, Color color){
-  uiElement *result = malloc(sizeof(uiElement));
-  if(!result){
-    LOG("element NONE allocation failed");
-    exit(1);
-  }
-
+  uiElement *result = bestow(sizeof(uiElement));
   *result = (uiElement){0};
   *result = (uiElement){
     .positionAbsolute = position,
