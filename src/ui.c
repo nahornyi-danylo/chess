@@ -11,15 +11,6 @@
 static stack context;
 static stack elements;
 
-// Oh the allmighty Gods of the GNU C compiler I pray to thee
-// allow this meager and insignificant function to be inlined
-static inline Vector2 add2Vec2(Vector2 one, Vector2 two){
-  return (Vector2){
-    one.x + two.x,
-    one.y + two.y
-  };
-}
-
 void initUI(uiElement *root, int width, int height){
   contextInfo *rootContext = bestow(sizeof(contextInfo));
   *rootContext = (contextInfo){0};
@@ -108,7 +99,7 @@ void uiAttach(uiElement *element){
   LOG("element attached\n");
 }
 
-uiScheme uiFinailzeUI(){
+uiScheme uiFinalizeUI(){
   uiScheme scheme = {0};
 
   scheme.tree = pop(&elements);
@@ -143,7 +134,6 @@ uiScheme uiFinailzeUI(){
   return scheme;
 }
 
-// TODO: Clean this up obviously
 void uiDrawUI(uiScheme scheme){
   Vector2 offset;
   uiElement *current;
@@ -155,8 +145,56 @@ void uiDrawUI(uiScheme scheme){
       LOG("Draw function not provided\n");
       exit(1);
     }
+    if(current->parent){
+      BeginScissorMode(
+        (int)current->parent->positionAbsolute.x,
+        (int)current->parent->positionAbsolute.y,
+        (int)current->parent->size.x,
+        (int)current->parent->size.y
+      );
+    }
     current->draw(current);
+    if(current->parent){
+      EndScissorMode();
+    }
   }
+}
+
+void uiHandleState(uiScheme scheme){
+  Vector2 mousepos = GetMousePosition();
+  unsigned permissions = 0b1111;
+
+  uiElement *current = scheme.tree;
+  // get the deepest element in the tree at mouse pos
+  if(!current) return;
+again:
+  for(int i = 0; i<current->numberOfChildren; i++){
+    if(current->children[i]){
+      if (CheckCollisionPointRec(
+              mousepos, (Rectangle){current->children[i]->positionAbsolute.x -
+                                        current->currentView.x,
+                                    current->children[i]->positionAbsolute.y -
+                                        current->currentView.y,
+                                    current->children[i]->size.x,
+                                    current->children[i]->size.y})) {
+
+        current = current->children[i];
+        goto again;
+      }
+    }
+  }
+  
+  // traverse back whilst calling handlers with appropriate permission mask
+  while(current){
+    if(permissions & current->handledState && current->handlerFunction){
+      current->handlerFunction(permissions & current->handledState, current);
+      permissions = permissions & ~current->handledState; 
+    }
+
+    current = current->parent;
+  }
+
+
 }
 
 // should be all
@@ -190,9 +228,13 @@ void uiDestroyUI(uiScheme scheme){
 
 // UI_NONE, will be used for splitting the screen into regions
 static void uiDrawNONE(uiElement *element){
+  Vector2 view = {0};
+  if(element->parent){
+    view = element->parent->currentView;
+  }
   // just a red outline for now
-  DrawRectangleLines(element->positionAbsolute.x,
-                     element->positionAbsolute.y,
+  DrawRectangleLines(element->positionAbsolute.x - view.x,
+                     element->positionAbsolute.y - view.y,
                      element->size.x, element->size.y, RED);
 }
 
@@ -210,97 +252,76 @@ uiElement *uiGetNone(Rectangle bounds){
 }
 
 // UI_TEXT
-
-// Same as the raylib implementation, but modified to be bound to a rect with
-// consideration for the current view 
-// returns 0 if the out of bounds, as a signal to stop feeding chars that won't be drawn
-// TODO handle for vertical bounds
-int DrawTextCodepointBound(Font font, int codepoint, float *offsetAccum, Rectangle bounds, Vector2 view, Vector2 position, float fontSize, Color tint){
-  // Character index position in sprite font
-  // NOTE: In case a codepoint is not available in the font, index returned points to '?'
-  int index = GetGlyphIndex(font, codepoint);
-  float scaleFactor = fontSize/font.baseSize;     // Character quad scaling factor
-  float leftDiff = 0;
-  float rightDiff = 0;
-  Rectangle glyphUnscaled = {
-    font.recs[index].x - (float)font.glyphPadding,
-    font.recs[index].y - (float)font.glyphPadding,
-    font.recs[index].width + 2.0f * font.glyphPadding,
-    font.recs[index].height + 2.0f * font.glyphPadding
-  };
-
-  Rectangle glyphScaled = {
-    font.glyphs[index].offsetX * scaleFactor - (float)font.glyphPadding * scaleFactor,
-    font.glyphs[index].offsetY * scaleFactor - (float)font.glyphPadding * scaleFactor,
-    glyphUnscaled.width * scaleFactor,
-    glyphUnscaled.height * scaleFactor
-  };
-
-  if(glyphScaled.width + position.x + *offsetAccum < bounds.x ||
-      position.x + *offsetAccum > bounds.x + bounds.width) {
-    *offsetAccum += font.recs[index].width * scaleFactor + font.glyphPadding * 2 + 1;
-    return 0;
-  }
-  
-  leftDiff = bounds.x - (position.x + *offsetAccum) > 0?bounds.x - (position.x + *offsetAccum):0;
-  rightDiff = position.x + *offsetAccum + glyphScaled.width - (bounds.x + bounds.width) > 0?position.x + *offsetAccum + glyphScaled.width - (bounds.x + bounds.width):0;
-
-  // Character destination rectangle on screen
-  // NOTE: We consider glyphPadding on drawing
-  Rectangle dstRec = {
-    position.x + *offsetAccum + glyphScaled.x + leftDiff - view.x,
-    position.y + glyphScaled.y,
-    glyphScaled.width - leftDiff - rightDiff,
-    glyphScaled.height
-  };
-
-  // Character source rectangle from font texture atlas
-  // NOTE: We consider chars padding when drawing, it could be required for outline/glow shader effects
-  Rectangle srcRec = {
-    glyphUnscaled.x + leftDiff/scaleFactor,
-    glyphUnscaled.y,
-    glyphUnscaled.width - leftDiff/scaleFactor - rightDiff/scaleFactor,
-    glyphUnscaled.height
-  };
-
-  // Draw the character texture on the screen
-  DrawTexturePro(font.texture, srcRec, dstRec, (Vector2){ 0, 0 }, 0.0f, tint);
-  *offsetAccum += font.recs[index].width * scaleFactor + font.glyphPadding * 2 + 1;
-  return 1;
-}
-
 static void uiDrawTEXT(uiElement *element){
-  GlyphInfo info;
-  float offsetAccum = 0;
-  Vector2 currentBoundView = add2Vec2(element->parent->positionAbsolute, element->parent->currentView);
-  for(int i = 0; element->elementInItself.text.text[i]; i++){
-    info = GetGlyphInfo(element->elementInItself.text.font, element->elementInItself.text.text[i]);
-    DrawTextCodepointBound(
-        element->elementInItself.text.font,
-        element->elementInItself.text.text[i], &offsetAccum,
-        (Rectangle){currentBoundView.x, currentBoundView.y,
-                    element->parent->size.x, element->parent->size.y},
-        element->parent->currentView,
-        element->positionAbsolute, element->elementInItself.text.fontSize,
-        element->elementInItself.text.color);
-  }
+  DrawTextEx(
+      element->elementInItself.text.font, element->elementInItself.text.text,
+      (Vector2){element->positionAbsolute.x - element->parent->currentView.x,
+                element->positionAbsolute.y - element->parent->currentView.y},
+      element->elementInItself.text.fontSize, 1,
+      element->elementInItself.text.color);
 }
 
+// TODO: Load font with codepoints other then latin
 uiElement *uiGetText(Vector2 position, char *text, float fontSize, Color color){
+  Font font = LoadFont("/usr/share/fonts/droid/DroidSans.ttf");
   uiElement *result = bestow(sizeof(uiElement));
   *result = (uiElement){0};
   *result = (uiElement){
     .positionAbsolute = position,
     .elementInItself.text.text = text,
-    .elementInItself.text.font = GetFontDefault(),
+    .elementInItself.text.font = font,
     .elementInItself.text.color = color,
     .elementInItself.text.fontSize = fontSize,
+    .elementInItself.text.scaleFactor = fontSize/font.baseSize,
     .draw = uiDrawTEXT
   };
   return result;
 }
 
 
+// UI_BUTTON
+static void uiDrawBUTTON(uiElement *element){
+  Vector2 view = {0};
+  if(element->parent){
+    view = element->parent->currentView;
+  }
+  DrawTexturePro(
+      element->elementInItself.button.buttonTexture,
+      (Rectangle){0, 0, element->elementInItself.button.buttonTexture.width,
+                  element->elementInItself.button.buttonTexture.height},
+      (Rectangle){element->positionAbsolute.x - view.x,
+                element->positionAbsolute.y - view.y, element->size.x, element->size.y},
+      (Vector2){0},
+      0, WHITE);
+};
+
+static void uiButtonHandler(unsigned permissions, uiElement *element){
+  if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+    LOG("button pressed\n");
+  }
+  if(element->elementInItself.button.callback){
+    element->elementInItself.button.callback();
+  }
+}
+
+uiElement *uiGetButton(Rectangle bounds, Shader shader, Texture2D texture, void(*func)(void)){
+  uiElement *result = bestow(sizeof(uiElement));
+  *result = (uiElement){0};
+  *result = (uiElement){
+    .positionAbsolute.x = bounds.x,
+    .positionAbsolute.y = bounds.y,
+    .size.x = bounds.width,
+    .size.y = bounds.height,
+    .draw = uiDrawBUTTON,
+    .handledState = 0b1111,
+    .handlerFunction = uiButtonHandler,
+    .elementInItself.button.buttonShader = shader,
+    .elementInItself.button.buttonTexture = texture,
+    .elementInItself.button.callback = func
+  };
+
+  return result;
+}
 
 
 
