@@ -11,10 +11,6 @@ Vector2 mwheel = {0};
 
 int main(){
 
-// Load Cyrillic manually
-// Clean up
-//UnloadCodepoints(cyrillicCharset);
-//Font font = LoadFontEx("/usr/share/fonts/TTF/DejaVuSans.ttf", 32, cyrillicCharset, charCount);
 
 
   uiElement *root = uiGetNone((Rectangle){.x = 0, .y = 0, .width = windowWidth, .height = windowHeight});
@@ -22,15 +18,6 @@ int main(){
   SetTargetFPS(60);
 
   Texture2D texture = LoadTexture("../resources/default/buttonTexture.png");
-
-//int charCount = 0;
-//int *cyrillicCharset = LoadCodepoints("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯІіїЇєЄґҐ", &charCount);
-//
-//// Now load font with that charset
-//Font font = LoadFontEx("/usr/share/fonts/droid/DroidSans.ttf", 32, cyrillicCharset, charCount);
-//printf("%d %d\n", font.texture.height, font.texture.width);    
-//SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
-//
 
   Shader sh;
 

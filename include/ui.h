@@ -46,11 +46,11 @@ typedef struct uiElement_{
   // bitmap of state handlers
   // from msb to lsb: mouse presses, m wheel up m wheel down, hover.
   // when such an event occurs, to the elements on the current mouse pos
-  // is given the contrlot flow for flexibility from leaf nodes to roots
+  // is given the contrlot flow for maximum flexibility, from leaf nodes to roots
   // in that order. If an event is handled at a higher depth, the corresponding
   // bits are subtracted, such that if both parent and child nodes handle, say,
   // mouse wheel change, only the child node is permitted to do so. However,
-  // these restriction are not inforced. The handler function gets the
+  // these restrictions are not inforced. The handler function gets the
   // uiElement *, and the allowed bitmap.
   unsigned handledState : 4;
   void (*handlerFunction)(unsigned, struct uiElement_ *);
