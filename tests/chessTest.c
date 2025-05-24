@@ -82,7 +82,8 @@ void drawBoard(){
 int main(){
   char buf[128];
   int n = 0;
-  loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+  //loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+  loadFEN("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - ");
   n = getCurrentFEN(buf);
   for(int i = 0; i<n; i++){
     printf("%c", buf[i]);
@@ -90,14 +91,14 @@ int main(){
   printf("\n");
 
   drawBoard();
-  //perft_divide(7);
+  perft_divide(8);
 
-  loadFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
-  n = getCurrentFEN(buf);
-  for(int i = 0; i<n; i++){
-    printf("%c", buf[i]);
-  }
-  printf("\n");
-  drawBoard();
+  //loadFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
+  //n = getCurrentFEN(buf);
+  //for(int i = 0; i<n; i++){
+    //printf("%c", buf[i]);
+  //}
+  //printf("\n");
+  //drawBoard();
   //perft_divide(6);
 }

@@ -11,6 +11,7 @@
 extern struct board board;
 extern pthread_mutex_t mutex;
 extern int *playingAs;
+extern struct move *lastMove;
 
 static struct {
   Texture2D cellTexture;
@@ -25,9 +26,12 @@ static struct {
   int hoverLoc;
   int attackLoc;
   int moveLoc;
+  int lastMoveLoc;
   int hovered[64];
   int canBeAttack[64];
   int canBeMove[64];
+  int lastMoveArr[64];
+  int checkedKingPos;
 }boardInfo;
 
 static const char *cellTexturePath = "../resources/default/cellsTest.png";
@@ -81,12 +85,26 @@ static void handler(unsigned permission, uiElement *element){
   for(int j = 0; j<64; j++){
     if(j == i) boardInfo.hovered[j] = 1;
     else boardInfo.hovered[j] = 0;
+    if(lastMove){
+      if(j == lastMove->from || j == lastMove->to) boardInfo.lastMoveArr[j] = 1;
+      else boardInfo.lastMoveArr[j] = 0;
+    }
+  }
+
+  if(boardInfo.checkedKingPos>=0)boardInfo.canBeAttack[boardInfo.checkedKingPos] = 0;
+  if(isPosAttacked(board.board, board.kingPos[board.currentSide], 1-board.currentSide)){
+    boardInfo.checkedKingPos = board.kingPos[board.currentSide];
+    boardInfo.canBeAttack[board.kingPos[board.currentSide]] = 1;
+  }
+  else{
+    boardInfo.checkedKingPos = -1;
   }
 
   if(board.state != ONGOING) return;
   if(*playingAs != board.currentSide) return;
 
   int lock;
+
   if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
     promotionPrompt = 0;
     if(!pressed || (board.board[i].type != NONE && board.board[i].side == board.currentSide)){
@@ -97,7 +115,9 @@ static void handler(unsigned permission, uiElement *element){
         pthread_mutex_unlock(&mutex);
       }
       for(int j = 0; j<64; j++){
-        boardInfo.canBeAttack[j] = 0;
+        if(j != boardInfo.checkedKingPos){
+          boardInfo.canBeAttack[j] = 0;
+        }
         boardInfo.canBeMove[j] = 0;
       }
       for(int l = 0; l<k; l++){
@@ -111,7 +131,9 @@ static void handler(unsigned permission, uiElement *element){
     }
     else{
       for(int j = 0; j<64; j++){
-        boardInfo.canBeAttack[j] = 0;
+        if(j != boardInfo.checkedKingPos){
+          boardInfo.canBeAttack[j] = 0;
+        }
         boardInfo.canBeMove[j] = 0;
       }
       for(int l = 0; l<k; l++){
@@ -147,6 +169,7 @@ static void drawBoard(uiElement *element){
         current = (current == &boardInfo.darkCellSrcRec)?&boardInfo.lightCellSrcRec:&boardInfo.darkCellSrcRec;
     }
     BeginShaderMode(boardInfo.cellShader);
+    SetShaderValue(boardInfo.cellShader, boardInfo.lastMoveLoc, &boardInfo.lastMoveArr[i], SHADER_UNIFORM_INT);
     SetShaderValue(boardInfo.cellShader, boardInfo.hoverLoc, &boardInfo.hovered[i], SHADER_UNIFORM_INT);
     SetShaderValue(boardInfo.cellShader, boardInfo.attackLoc, &boardInfo.canBeAttack[i], SHADER_UNIFORM_INT);
     SetShaderValue(boardInfo.cellShader, boardInfo.moveLoc, &boardInfo.canBeMove[i], SHADER_UNIFORM_INT);
@@ -200,6 +223,7 @@ uiElement *chessUIGetBoard(Rectangle bounds, int reversed){
   boardInfo.hoverLoc = GetShaderLocation(boardInfo.cellShader, "isHovered");
   boardInfo.attackLoc = GetShaderLocation(boardInfo.cellShader, "isAttack");
   boardInfo.moveLoc = GetShaderLocation(boardInfo.cellShader, "isMove");
+  boardInfo.lastMoveLoc = GetShaderLocation(boardInfo.cellShader, "isLastMove");
   
   // I REALLY want to index the src recs with my enum and color,
   // however, in the texture it's almost completly backwards.

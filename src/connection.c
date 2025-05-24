@@ -7,6 +7,7 @@
 
 int recvC(int socket, void *msg, int size, int flags){
   int ret = recv(socket, msg, size, flags);
+  DEBUG_LOG("Received a message\n");
   if(ret == -1){
     LOG("recv failed\n");
     perror("");
@@ -17,6 +18,7 @@ int recvC(int socket, void *msg, int size, int flags){
 
 void sendC(int socket, void *msg, int size, int flags){
   int ret = send(socket, msg, size, flags);
+  DEBUG_LOG("Sent a message\n");
   if(ret == -1){
     LOG("recv failed\n");
     perror("");

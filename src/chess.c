@@ -144,9 +144,9 @@ void makeMove(struct move *move){
       board.board[move->from].type = NONE;
       break;
     case EN_PASSANT:
-      move->captured = board.board[move->to];
-      board.board[move->to + pawnDir] = board.board[move->from];
-      board.board[move->to].type = NONE;
+      move->captured = board.board[move->to - pawnDir];
+      board.board[move->to] = board.board[move->from];
+      board.board[move->to - pawnDir].type = NONE;
       board.board[move->from].type = NONE;
       break;
     case CASTLE_Q:
@@ -217,8 +217,8 @@ void undoMove(struct move *move){
       board.board[move->to] = move->captured;
       break;
     case EN_PASSANT:
-      board.board[move->to] = move->captured;
-      board.board[move->to + pawnDir].type = NONE;
+      board.board[move->to - pawnDir] = move->captured;
+      board.board[move->to].type = NONE;
       board.board[move->from].type = PAWN;
       board.board[move->from].side = board.currentSide;
       break;
@@ -318,7 +318,7 @@ static int calculateCandidatesPawn(int pos, struct move *mlist, int mlistIndex){
     if (isOnBoard2d(f) && isOnBoard2d(r) && board.board[t].type != NONE) {
       if(board.board[t].side == opponent && t == board.enPassant){
         move.type = EN_PASSANT;
-        move.to = t;
+        move.to = t + 8*dir;
         if(!tryMove(&move)){
           mlist[mlistIndex + idx++] = move;
         }

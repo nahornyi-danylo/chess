@@ -112,10 +112,13 @@ int loadFEN(const char *str){
   if(n == -1) return -1;
   else str += n;
 
-  str++;
+  //str++;
   if(*str == '-') board.enPassant = -1;
+  else{
+    board.enPassant = (str[1]-1) * 8 + str[0] - 'a';
+    str+=2;
+  }
 
-  str++;
   str++;
   if(*str && *str != ' '){
     sscanf(str, "%d %d", &board.halfMove, &board.fullMove);
@@ -125,10 +128,10 @@ int loadFEN(const char *str){
     board.fullMove = 1;
   }
 
-  LOG("FEN parsed successfully");
+  LOG("FEN parsed successfully\n");
   return 0;
 fail:
-  LOG("Error while loading FEN");
+  LOG("Error while loading FEN\n");
   return -1;
 }
 
@@ -177,7 +180,6 @@ int getCurrentFEN(char *buf){
     if(board.castleMask & CASTLE_BLACK_Q) buf[ret++] = 'q';
   }
   buf[ret++] = ' ';
-  LOG("en passant %d\n", board.enPassant);
   if(board.enPassant == -1) buf[ret++] = '-';
   else{
     buf[ret++] = board.enPassant%8 + 'a';

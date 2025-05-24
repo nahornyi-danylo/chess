@@ -11,6 +11,7 @@ static void(*moveP)(struct move *m);
 extern struct board board;
 static struct move *moves;
 static stack moveStack;
+struct move *lastMove = NULL;
 
 extern int serverSocket;
 extern pthread_mutex_t mutex;
@@ -37,6 +38,7 @@ void move(struct move *m){
 
   moveP(allocatedMove);
   push(allocatedMove, &moveStack);
+  lastMove = allocatedMove;
   if(!generateAllLegalMoves(mlist)){
     if(isPosAttacked(board.board, board.kingPos[board.currentSide], 1-board.currentSide)){
       board.state = CHECKMATE;
