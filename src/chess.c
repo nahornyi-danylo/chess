@@ -112,6 +112,7 @@ int isPosAttacked(struct piece *state, int pos, int opponent){
 void makeMove(struct move *move){
   // save the snapshot of current castling rights and en passant candidate before the move
   move->castlingRights = board.castleMask;
+  move->who = board.board[move->from].type;
   move->enPassant = board.enPassant;
 
   // here we don't bother checking for bounds as it is done in the candidate calculation stage

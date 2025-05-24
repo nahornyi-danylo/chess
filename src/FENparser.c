@@ -58,6 +58,7 @@ int parseFENpieces(const char *fen) {
 
 int parseCastleRights(const char *str) {
   board.castleMask = 0b0000;
+  int count = 0;
 
   if (*str == '-') {
     return 0;
@@ -67,23 +68,26 @@ int parseCastleRights(const char *str) {
     switch (*str) {
       case 'K':
         board.castleMask |= CASTLE_WHITE_K;
+        count++;
         break;
       case 'Q':
         board.castleMask |= CASTLE_WHITE_Q;
+        count++;
         break;
       case 'k':
         board.castleMask |= CASTLE_BLACK_K;
+        count++;
         break;
       case 'q':
         board.castleMask |= CASTLE_BLACK_Q;
+        count++;
         break;
       default:
         return -1;
     }
   }
-  LOG("%d\n", board.castleMask);
 
-  return 0;
+  return count;
 }
 
 // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
@@ -101,17 +105,89 @@ int loadFEN(const char *str){
     board.currentSide = 1;
   }
   else goto fail;
-  LOG("%d\n", board.currentSide);
 
   str++;
   while (isspace((unsigned char)*str)) str++;
-  parseCastleRights(str);
+  int n = parseCastleRights(str);
+  if(n == -1) return -1;
+  else str += n;
 
-  // TODO finish this
-  
+  str++;
+  if(*str == '-') board.enPassant = -1;
 
+  str++;
+  str++;
+  if(*str && *str != ' '){
+    sscanf(str, "%d %d", &board.halfMove, &board.fullMove);
+  }
+  else{
+    board.halfMove = 0;
+    board.fullMove = 1;
+  }
+
+  LOG("FEN parsed successfully");
   return 0;
 fail:
   LOG("Error while loading FEN");
   return -1;
 }
+
+//enum pieceType{
+  //NONE = 0,
+  //PAWN,
+  //BISHOP,
+  //KNIGHT,
+  //ROOK,
+  //QUEEN,
+  //KING
+//};
+
+static const char *correspond = "PBNRQKpbnrqk";
+
+int getCurrentFEN(char *buf){
+  int ret = 0;
+  int p;
+  int count = 0;
+  for(int i = 7; i>=0; i--){
+    for(int j = 0; j<8; j++){
+      p = i*8+j;
+      if(board.board[p].type == NONE){
+        count++;
+      }
+      else{
+        if(count) buf[ret++] = count + '0';
+        buf[ret++] = correspond[board.board[p].type - 1 + 6 * board.board[p].side];
+        count = 0;
+      }
+    }
+    if(count) buf[ret++] = count + '0';
+    count = 0;
+    buf[ret++] = '/';
+  }
+  buf[ret++] = ' ';
+  buf[ret++] = !board.currentSide?'w':'b';
+  buf[ret++] = ' ';
+  if(!board.castleMask){
+    buf[ret++] = '-';
+  }
+  else{
+    if(board.castleMask & CASTLE_WHITE_K) buf[ret++] = 'K';
+    if(board.castleMask & CASTLE_WHITE_Q) buf[ret++] = 'Q';
+    if(board.castleMask & CASTLE_BLACK_K) buf[ret++] = 'k';
+    if(board.castleMask & CASTLE_BLACK_Q) buf[ret++] = 'q';
+  }
+  buf[ret++] = ' ';
+  LOG("en passant %d\n", board.enPassant);
+  if(board.enPassant == -1) buf[ret++] = '-';
+  else{
+    buf[ret++] = board.enPassant%8 + 'a';
+    buf[ret++] = board.enPassant/8 + 1;
+  }
+  buf[ret++] = ' ';
+
+  ret += sprintf(&buf[ret], "%d %d", board.halfMove, board.fullMove);
+
+  return ret;
+}
+
+

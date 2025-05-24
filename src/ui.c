@@ -135,7 +135,6 @@ uiScheme uiFinalizeUI(){
 }
 
 void uiDrawUI(uiScheme scheme){
-  Vector2 offset;
   uiElement *current;
 
   for(int i = 0; i<scheme.elementCount; i++){

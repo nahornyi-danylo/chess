@@ -3,10 +3,14 @@
 #define LOG_PREFIX "chess UI"
 #include "../include/common.h"
 #include "../include/chess.h"
+#include "../include/game.h"
+#include <pthread.h>
 //#include <raylib.h>
 
 // nobody will have more than one board, so I MUST hardcode on a single global instance
 extern struct board board;
+extern pthread_mutex_t mutex;
+extern int *playingAs;
 
 static struct {
   Texture2D cellTexture;
@@ -30,8 +34,37 @@ static const char *cellTexturePath = "../resources/default/cellsTest.png";
 static const char *piecesTexturePath = "../resources/default/ChessPiecesArray.png";
 static const char *cellShaderPath = "../resources/default/cellfs.glsl";
 
+
 static void handler(unsigned permission, uiElement *element){
-  struct move mlist[256];
+  static int pressed = 0;
+  static struct move mlist[256];
+  static int k = 0;
+  static int promotionPrompt = 0;
+  static struct move promotoionMove;
+
+  if(promotionPrompt){
+    if(IsKeyPressed(KEY_ONE)){
+      promotoionMove.type = PROMOTION_Q;
+      move(&promotoionMove);
+      promotionPrompt = 0;
+    }
+    else if(IsKeyPressed(KEY_TWO)){
+      promotoionMove.type = PROMOTION_N;
+      move(&promotoionMove);
+      promotionPrompt = 0;
+    }
+    else if(IsKeyPressed(KEY_THREE)){
+      promotoionMove.type = PROMOTION_B;
+      move(&promotoionMove);
+      promotionPrompt = 0;
+    }
+    else if(IsKeyPressed(KEY_FOUR)){
+      promotoionMove.type = PROMOTION_R;
+      move(&promotoionMove);
+      promotionPrompt = 0;
+    }
+  }
+
   Vector2 mousepos = GetMousePosition();
   int i;
   int boardX = element->positionAbsolute.x;
@@ -40,7 +73,6 @@ static void handler(unsigned permission, uiElement *element){
   int cellW = boardInfo.cellSize.x;
   int cellH = boardInfo.cellSize.y;
 
-  // compute file (0–7) and rank (0–7)
   int file = 8 - (element->size.y-(mousepos.x - boardX)) / cellW;
   int rank = (element->size.x-(mousepos.y - boardY)) / cellH;
 
@@ -50,19 +82,53 @@ static void handler(unsigned permission, uiElement *element){
     if(j == i) boardInfo.hovered[j] = 1;
     else boardInfo.hovered[j] = 0;
   }
+
+  if(board.state != ONGOING) return;
+  if(*playingAs != board.currentSide) return;
+
+  int lock;
   if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-    int k = generateLegalMoves(mlist, i);
-    for(int j = 0; j<64; j++){
-      boardInfo.canBeAttack[j] = 0;
-      boardInfo.canBeMove[j] = 0;
+    promotionPrompt = 0;
+    if(!pressed || (board.board[i].type != NONE && board.board[i].side == board.currentSide)){
+      pressed = 1;
+      lock = pthread_mutex_trylock(&mutex);
+      if(!lock){
+        k = generateLegalMoves(mlist, i);
+        pthread_mutex_unlock(&mutex);
+      }
+      for(int j = 0; j<64; j++){
+        boardInfo.canBeAttack[j] = 0;
+        boardInfo.canBeMove[j] = 0;
+      }
+      for(int l = 0; l<k; l++){
+        if(mlist[l].type == CAPTURE || mlist[l].type == EN_PASSANT){
+          boardInfo.canBeAttack[mlist[l].to] = 1;
+        }
+        else{
+          boardInfo.canBeMove[mlist[l].to] = 1;
+        }
+      }
     }
-    for(int l = 0; l<k; l++){
-      if(mlist[l].type == CAPTURE || mlist[l].type == EN_PASSANT){
-        boardInfo.canBeAttack[mlist[l].to] = 1;
+    else{
+      for(int j = 0; j<64; j++){
+        boardInfo.canBeAttack[j] = 0;
+        boardInfo.canBeMove[j] = 0;
       }
-      else{
-        boardInfo.canBeMove[mlist[l].to] = 1;
+      for(int l = 0; l<k; l++){
+        if(mlist[l].to == i){
+          LOG("made move from %d to %d\n", mlist[l].from, mlist[l].to);
+          if(mlist[l].type > 5){
+            promotionPrompt = 1;
+            promotoionMove = mlist[l];
+            LOG("Which promotion to make???\n1-Queen\n2-Knight\n3-Bishop\n4-Rook\nInput from keyboard\n");
+            break;
+          }
+          move(&mlist[l]);
+          LOG("current side %d\n", board.currentSide);
+          break;
+        }
       }
+      pressed = 0;
     }
 
   }

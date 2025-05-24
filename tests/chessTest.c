@@ -80,11 +80,24 @@ void drawBoard(){
 }
 
 int main(){
+  char buf[128];
+  int n = 0;
   loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+  n = getCurrentFEN(buf);
+  for(int i = 0; i<n; i++){
+    printf("%c", buf[i]);
+  }
+  printf("\n");
+
   drawBoard();
-  perft_divide(7);
+  //perft_divide(7);
 
   loadFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
+  n = getCurrentFEN(buf);
+  for(int i = 0; i<n; i++){
+    printf("%c", buf[i]);
+  }
+  printf("\n");
   drawBoard();
-  perft_divide(6);
+  //perft_divide(6);
 }
