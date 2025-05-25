@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#define LOG_PREFIX "connection"
 #include "../include/common.h"
 #include "../include/connection.h"
 

@@ -90,10 +90,9 @@ int n = 0;
 // client can only ever send a move
 int interpretMsgServ(char *str){
   int approve = 0;
-  // not sure which side the char will get padded
-  struct msgM *msg = (struct msgM *)str;
-  if(msg->msgType != 'm') return 0;
-  struct move *m = &msg->move;
+  struct move *m;
+  if(str[0] != 'm') return 0;
+  m = (struct move *)(str+1);
   for(int i = 0; i<n; i++){
     // I believe these 3 fields are enough
     if(m->to == mlist[i].to &&
@@ -148,9 +147,9 @@ int main(){
     n = generateAllLegalMoves(mlist);
     recvC(clientSockets[board.currentSide], buf, 255, 0);
     if(interpretMsgServ(buf)){
-      sendC(clientSockets[board.currentSide], buf, sizeof(struct msgM), 0);
+      sendC(clientSockets[board.currentSide], buf, sizeof(struct move) + 1, 0);
       buf[0] = 'a';
-      sendC(clientSockets[1-board.currentSide], buf, sizeof(struct msgM), 0);
+      sendC(clientSockets[1-board.currentSide], buf, sizeof(struct move) + 1, 0);
     }
     else{
       buf[0] = 'd';

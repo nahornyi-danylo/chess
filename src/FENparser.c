@@ -92,43 +92,43 @@ int parseCastleRights(const char *str) {
 
 // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
 int loadFEN(const char *str){
-  if(parseFENpieces(str)){
-    goto fail;
-  };
-  while(*str!=' ') str++;
+  if (parseFENpieces(str)) goto fail;
+
+  while (*str && *str != ' ') str++;
   str++;
 
-  if(*str == 'w'){
-    board.currentSide = 0;
-  }
-  else if(*str == 'b'){
-    board.currentSide = 1;
-  }
-  else goto fail;
-
+  // current side
+  if (*str == 'w')       board.currentSide = 0;
+  else if (*str == 'b')  board.currentSide = 1;
+  else                   goto fail;
   str++;
-  while (isspace((unsigned char)*str)) str++;
-  int n = parseCastleRights(str);
-  if(n == -1) return -1;
-  else str += n;
 
-  //str++;
-  if(*str == '-') board.enPassant = -1;
-  else{
-    board.enPassant = (str[1]-1) * 8 + str[0] - 'a';
-    str+=2;
+  while (isspace(*str)) str++;
+  if (parseCastleRights(str) < 0) goto fail;
+
+  while (*str && *str != ' ') str++;
+  if (*str == ' ') str++;
+
+  // en passant
+  if (*str == '-') {
+    board.enPassant = -1;
+    str++;
+  } else {
+    int file = str[0] - 'a';
+    int rank = str[1] - '1';
+    if (file < 0 || file > 7 || rank < 0 || rank > 7) goto fail;
+    board.enPassant = rank*8 + file;
+    str += 2;
   }
 
-  str++;
-  if(*str && *str != ' '){
-    sscanf(str, "%d %d", &board.halfMove, &board.fullMove);
-  }
-  else{
+  while (*str && *str == ' ') str++;
+  if (sscanf(str, "%d %d", &board.halfMove, &board.fullMove) != 2) {
     board.halfMove = 0;
     board.fullMove = 1;
   }
 
-  LOG("FEN parsed successfully\n");
+  LOG("FEN parsed successfully: hm=%d fm=%d\n",
+      board.halfMove, board.fullMove);
   return 0;
 fail:
   LOG("Error while loading FEN\n");

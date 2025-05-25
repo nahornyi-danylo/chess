@@ -14,7 +14,7 @@ static stack moveStack;
 struct move *lastMove = NULL;
 
 extern int serverSocket;
-extern pthread_mutex_t mutex;
+pthread_mutex_t mutex;
 int *playingAs;
 int playingAsMem;
 
@@ -36,9 +36,16 @@ void move(struct move *m){
   struct move *allocatedMove = bestow(sizeof(*allocatedMove));
   *allocatedMove = *m;
 
+  board.halfMove++;
+  if(board.board[m->from].type == PAWN) board.halfMove = 0;
+
   moveP(allocatedMove);
   push(allocatedMove, &moveStack);
   lastMove = allocatedMove;
+
+  if(board.board[m->to].side == 1) board.fullMove++;
+  if(m->captured.type != NONE) board.halfMove = 0;
+
   if(!generateAllLegalMoves(mlist)){
     if(isPosAttacked(board.board, board.kingPos[board.currentSide], 1-board.currentSide)){
       board.state = CHECKMATE;
@@ -50,11 +57,16 @@ void move(struct move *m){
       LOG("Stalemate!\n");
       printOutMoveList();
     }
-
+  }
+  if(board.halfMove == 100){
+    board.state = DRAW;
+    LOG("Draw by 50 move rule\n");
+    printOutMoveList();
   }
 }
 
 void initGameLocal(){
+  pthread_mutex_init(&mutex, NULL);
   playingAs = &board.currentSide;
   moveP = makeMove;
   moves = bestow(50*sizeof(struct move *));
@@ -62,8 +74,10 @@ void initGameLocal(){
 }
 
 void makeMoveSend(struct move *m){
-  struct msgM msg = {'m', *m};
-  sendC(serverSocket, &msg, sizeof(struct msgM), 0);
+  char buf[256];
+  buf[0] = 'm';
+  *(struct move *)(buf+1) = *m;
+  sendC(serverSocket, &buf, sizeof(struct move) + 1, 0);
 }
 
 void makeMoveReceive(struct move *m){
@@ -76,6 +90,7 @@ void makeMoveReceive(struct move *m){
 }
 
 void initGameOnline(){
+  pthread_mutex_init(&mutex, NULL);
   playingAs = &playingAsMem;
   moveP = makeMoveSend;
   moves = bestow(50*sizeof(struct move *));

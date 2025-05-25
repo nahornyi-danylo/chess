@@ -4,7 +4,6 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <errno.h>
 
 #define LOG_PREFIX "client"
 #include "../include/common.h"
@@ -14,12 +13,11 @@
 
 extern struct board board;
 int serverSocket;
-pthread_mutex_t mutex;
+extern pthread_mutex_t mutex;
 extern int *playingAs;
 char buf[256];
 
 int initConnection(const char *ip, const char *port){
-  pthread_mutex_init(&mutex, NULL);
   struct addrinfo hints = {0};
   struct addrinfo *servinfo, *p;
   int error;
@@ -72,28 +70,37 @@ int initConnection(const char *ip, const char *port){
 }
 
 void interpretMsg(){
-  struct msgM *m;
+  struct move m;
   if(buf[0] == 'd'){
     LOG("move disapproved, reloading FEN\n");
     loadFEN(((char *)buf)+1);
   }
   else if(buf[0] == 'a'){
-    m = (struct msgM *)buf;
-    if(m->msgType == 'a'){
-      LOG("move approved\n");
-      makeMoveReceive(&m->move);
+    m = *(struct move *)(buf+1);
+    LOG("move approved\n");
+    makeMoveReceive(&m);
+  }
+  else if(buf[0] == 'm'){
+    m = *(struct move *)(buf+1);
+    LOG("received a move\n");
+    makeMoveReceive(&m);
+  }
+  else if(buf[0] == 'f'){
+    LOG("Game finished!\n");
+    switch(buf[1]){
+      case '0':
+        LOG("White won!\n");
+        break;
+      case '1':
+        LOG("Black won!\n");
+        break;
+      case '2':
+        LOG("Draw!\n");
+        break;
     }
   }
   else{
-    m = (struct msgM *)buf;
-    if(m->msgType == 'm'){
-      LOG("received a move\n");
-      makeMoveReceive(&m->move);
-    }
-    else{
-      LOG("received junk\n");
-    }
-
+    LOG("received junk\n");
   }
 }
 
@@ -104,7 +111,10 @@ void *clientConnectionThread(void *ptr){
     if(n>0){
       interpretMsg();
     }
-    else break;
+    else {
+      LOG("connetion terminated\n");
+      break;
+    }
   }
   return NULL;
 }
