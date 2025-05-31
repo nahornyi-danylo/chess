@@ -5,34 +5,13 @@
 #include "../include/chess.h"
 #include "../include/game.h"
 #include <pthread.h>
-//#include <raylib.h>
 
 // nobody will have more than one board, so I MUST hardcode on a single global instance
 extern struct board board;
 extern pthread_mutex_t mutex;
-extern int *playingAs;
-extern struct move *lastMove;
 
-static struct {
-  Texture2D cellTexture;
-  Texture2D piecesTexture;
-  Vector2 cellSize;
-  Rectangle lightCellSrcRec;
-  Rectangle darkCellSrcRec;
-  Rectangle piecesSrc[2][6];
-  int reverseBoard;
 
-  Shader cellShader;
-  int hoverLoc;
-  int attackLoc;
-  int moveLoc;
-  int lastMoveLoc;
-  int hovered[64];
-  int canBeAttack[64];
-  int canBeMove[64];
-  int lastMoveArr[64];
-  int checkedKingPos;
-}boardInfo;
+struct drawInfo boardInfo = {0};
 
 static const char *cellTexturePath = "../resources/default/cellsTest.png";
 static const char *piecesTexturePath = "../resources/default/ChessPiecesArray.png";
@@ -47,28 +26,31 @@ static void handler(unsigned permission, uiElement *element){
   static struct move promotoionMove;
 
   if(promotionPrompt){
-    if(IsKeyPressed(KEY_ONE)){
-      promotoionMove.type = PROMOTION_Q;
-      move(&promotoionMove);
-      promotionPrompt = 0;
-    }
-    else if(IsKeyPressed(KEY_TWO)){
-      promotoionMove.type = PROMOTION_N;
-      move(&promotoionMove);
-      promotionPrompt = 0;
-    }
-    else if(IsKeyPressed(KEY_THREE)){
-      promotoionMove.type = PROMOTION_B;
-      move(&promotoionMove);
-      promotionPrompt = 0;
-    }
-    else if(IsKeyPressed(KEY_FOUR)){
-      promotoionMove.type = PROMOTION_R;
-      move(&promotoionMove);
-      promotionPrompt = 0;
+    switch(GetKeyPressed()){
+      case KEY_ONE:
+        promotoionMove.type = PROMOTION_Q;
+        move(&promotoionMove);
+        promotionPrompt = 0;
+        break;
+      case KEY_TWO:
+        promotoionMove.type = PROMOTION_N;
+        move(&promotoionMove);
+        promotionPrompt = 0;
+        break;
+      case KEY_THREE:
+        promotoionMove.type = PROMOTION_B;
+        move(&promotoionMove);
+        promotionPrompt = 0;
+        break;
+      case KEY_FOUR:
+        promotoionMove.type = PROMOTION_R;
+        move(&promotoionMove);
+        promotionPrompt = 0;
+        break;
     }
   }
-
+  
+  // get the square under cursor
   Vector2 mousepos = GetMousePosition();
   int i;
   int boardX = element->positionAbsolute.x;
@@ -82,15 +64,16 @@ static void handler(unsigned permission, uiElement *element){
 
   i = 8*rank+file;
   if(boardInfo.reverseBoard) i = 63-i;
-  for(int j = 0; j<64; j++){
-    if(j == i) boardInfo.hovered[j] = 1;
-    else boardInfo.hovered[j] = 0;
-    if(lastMove){
-      if(j == lastMove->from || j == lastMove->to) boardInfo.lastMoveArr[j] = 1;
-      else boardInfo.lastMoveArr[j] = 0;
+  
+  // update the hover highlight
+  if(H_HOVER){
+    for(int j = 0; j<64; j++){
+      if(j == i) boardInfo.hovered[j] = 1;
+      else boardInfo.hovered[j] = 0;
     }
   }
 
+  // get the checked king's pos for highlight
   if(boardInfo.checkedKingPos>=0)boardInfo.canBeAttack[boardInfo.checkedKingPos] = 0;
   if(isPosAttacked(board.board, board.kingPos[board.currentSide], 1-board.currentSide)){
     boardInfo.checkedKingPos = board.kingPos[board.currentSide];
@@ -100,73 +83,86 @@ static void handler(unsigned permission, uiElement *element){
     boardInfo.checkedKingPos = -1;
   }
 
+  // do nothing but highlights if the game is finished
   if(board.state != ONGOING) return;
-  if(*playingAs != board.currentSide) return;
+  // or if it's an online match, and not the client's turn
+  if(*boardInfo.playingAs != board.currentSide) return;
 
-  int lock;
 
-  if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-    promotionPrompt = 0;
-    if(!pressed || (board.board[i].type != NONE && board.board[i].side == board.currentSide)){
-      pressed = 1;
-      lock = pthread_mutex_trylock(&mutex);
-      if(!lock){
-        k = generateLegalMoves(mlist, i);
-        pthread_mutex_unlock(&mutex);
-      }
-      for(int j = 0; j<64; j++){
-        if(j != boardInfo.checkedKingPos){
-          boardInfo.canBeAttack[j] = 0;
+  if(permission & H_BUTTON_IO){
+    if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+      // cancel promotion on click
+      promotionPrompt = 0;
+
+      // get moves for a pressed pos in a thread-safe manner and update highlights
+      if(!pressed || (board.board[i].type != NONE && board.board[i].side == board.currentSide)){
+        pressed = 1;
+        int lock = pthread_mutex_trylock(&mutex);
+        if(!lock){
+          k = generateLegalMoves(mlist, i);
+          pthread_mutex_unlock(&mutex);
         }
-        boardInfo.canBeMove[j] = 0;
-      }
-      for(int l = 0; l<k; l++){
-        if(mlist[l].type == CAPTURE || mlist[l].type == EN_PASSANT){
-          boardInfo.canBeAttack[mlist[l].to] = 1;
+        for(int j = 0; j<64; j++){
+          if(j != boardInfo.checkedKingPos){
+            boardInfo.canBeAttack[j] = 0;
+          }
+          boardInfo.canBeMove[j] = 0;
         }
-        else{
-          boardInfo.canBeMove[mlist[l].to] = 1;
+        for(int l = 0; l<k; l++){
+          if(mlist[l].type == CAPTURE || mlist[l].type == EN_PASSANT){
+            boardInfo.canBeAttack[mlist[l].to] = 1;
+          }
+          else{
+            boardInfo.canBeMove[mlist[l].to] = 1;
+          }
         }
       }
-    }
-    else{
-      for(int j = 0; j<64; j++){
-        if(j != boardInfo.checkedKingPos){
-          boardInfo.canBeAttack[j] = 0;
+      // cancel previous highlights if pressed on a square which is not a legal move
+      // or make a move otherwise, and prompt promotion if needed
+      else{
+        for(int j = 0; j<64; j++){
+          if(j != boardInfo.checkedKingPos){
+            boardInfo.canBeAttack[j] = 0;
+          }
+          boardInfo.canBeMove[j] = 0;
         }
-        boardInfo.canBeMove[j] = 0;
-      }
-      for(int l = 0; l<k; l++){
-        if(mlist[l].to == i){
-          LOG("made move from %d to %d\n", mlist[l].from, mlist[l].to);
-          if(mlist[l].type > 5){
-            promotionPrompt = 1;
-            promotoionMove = mlist[l];
-            LOG("Which promotion to make???\n1-Queen\n2-Knight\n3-Bishop\n4-Rook\nInput from keyboard\n");
+        for(int l = 0; l<k; l++){
+          if(mlist[l].to == i){
+            LOG("made move from %d to %d\n", mlist[l].from, mlist[l].to);
+            if(mlist[l].type > 5){
+              promotionPrompt = 1;
+              promotoionMove = mlist[l];
+              LOG("Which promotion to make???\n1-Queen\n2-Knight\n3-Bishop\n4-Rook\nInput from keyboard\n");
+              break;
+            }
+            move(&mlist[l]);
             break;
           }
-          move(&mlist[l]);
-          LOG("current side %d\n", board.currentSide);
-          break;
         }
+        pressed = 0;
       }
-      pressed = 0;
     }
-
   }
+}
 
+void backout(uiElement *element){
+  for(int i = 0; i<64; i++){
+    boardInfo.hovered[i] = 0;
+  }
 }
 
 static void drawBoard(uiElement *element){
   int j;
   Rectangle *current = &boardInfo.lightCellSrcRec;
+
+  // draw squares with highlights applied in the fragment shader
   for(int i = 0; i<64; i++){
     if(boardInfo.reverseBoard) j = 63-i;
     else j = i;
     int file =  j % 8;
     int rank =  (63-j) / 8;
     if((file == 0 && !boardInfo.reverseBoard) || (file == 7 && boardInfo.reverseBoard)){
-        current = (current == &boardInfo.darkCellSrcRec)?&boardInfo.lightCellSrcRec:&boardInfo.darkCellSrcRec;
+      current = (current == &boardInfo.darkCellSrcRec)?&boardInfo.lightCellSrcRec:&boardInfo.darkCellSrcRec;
     }
     BeginShaderMode(boardInfo.cellShader);
     SetShaderValue(boardInfo.cellShader, boardInfo.lastMoveLoc, &boardInfo.lastMoveArr[i], SHADER_UNIFORM_INT);
@@ -174,18 +170,22 @@ static void drawBoard(uiElement *element){
     SetShaderValue(boardInfo.cellShader, boardInfo.attackLoc, &boardInfo.canBeAttack[i], SHADER_UNIFORM_INT);
     SetShaderValue(boardInfo.cellShader, boardInfo.moveLoc, &boardInfo.canBeMove[i], SHADER_UNIFORM_INT);
     DrawTexturePro(
-        boardInfo.cellTexture,
-        *current,
-        (Rectangle){element->positionAbsolute.x+(file)*boardInfo.cellSize.x, element->positionAbsolute.y+(rank)*boardInfo.cellSize.y, boardInfo.cellSize.x, boardInfo.cellSize.y},
-        (Vector2){0},
-        0,
-        WHITE
+          boardInfo.cellTexture,
+          *current,
+          (Rectangle){element->positionAbsolute.x+(file)*boardInfo.cellSize.x,
+                      element->positionAbsolute.y+(rank)*boardInfo.cellSize.y,
+                      boardInfo.cellSize.x,
+                      boardInfo.cellSize.y},
+          (Vector2){0},
+          0,
+          WHITE
         );
     EndShaderMode();
 
     current = current == &boardInfo.darkCellSrcRec?&boardInfo.lightCellSrcRec:&boardInfo.darkCellSrcRec;
   }
   
+  // draw the pieces
   for(int i = 0; i<64; i++){
     if(boardInfo.reverseBoard) j = 63-i;
     else j = i;
@@ -193,12 +193,15 @@ static void drawBoard(uiElement *element){
     int rank =  (63-j) / 8;
     if(board.board[i].type != NONE){
       DrawTexturePro(
-          boardInfo.piecesTexture,
-          boardInfo.piecesSrc[board.board[i].side][board.board[i].type-1],
-          (Rectangle){element->positionAbsolute.x+(file)*boardInfo.cellSize.x, element->positionAbsolute.y+(rank)*boardInfo.cellSize.y, boardInfo.cellSize.x, boardInfo.cellSize.y},
-          (Vector2){0},
-          0,
-          WHITE
+            boardInfo.piecesTexture,
+            boardInfo.piecesSrc[board.board[i].side][board.board[i].type-1],
+            (Rectangle){element->positionAbsolute.x+(file)*boardInfo.cellSize.x,
+                        element->positionAbsolute.y+(rank)*boardInfo.cellSize.y,
+                        boardInfo.cellSize.x,
+                        boardInfo.cellSize.y},
+            (Vector2){0},
+            0,
+            WHITE
           );
     }
   }
@@ -254,9 +257,9 @@ uiElement *chessUIGetBoard(Rectangle bounds, int reversed){
     .size.x = bounds.width,
     .size.y = bounds.height,
     .draw = drawBoard,
-    .handledState = 0b1001,
+    .handledState = H_BUTTON_IO | H_HOVER,
     .handlerFunction = handler,
-
+    .handlerBackout = backout
   };
 
   return result;

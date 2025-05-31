@@ -3,19 +3,20 @@
 #include "../include/chess.h"
 #include "../include/game.h"
 #include "../include/stack.h"
+#include "../include/chessUI.h"
 #include "../include/connection.h"
 #include <pthread.h>
 
 static void(*moveP)(struct move *m);
 
 extern struct board board;
+extern struct drawInfo boardInfo;
+extern int serverSocket;
+
 static struct move *moves;
 static stack moveStack;
-struct move *lastMove = NULL;
 
-extern int serverSocket;
 pthread_mutex_t mutex;
-int *playingAs;
 int playingAsMem;
 
 static const char *piece = " PBNRQK";
@@ -41,7 +42,14 @@ void move(struct move *m){
 
   moveP(allocatedMove);
   push(allocatedMove, &moveStack);
-  lastMove = allocatedMove;
+
+  // last move highlights
+  for(int i = 0; i<64; i++){
+    if(i == m->from || i == m->to){
+      boardInfo.lastMoveArr[i] = 1;
+    }
+    else boardInfo.lastMoveArr[i] = 0;
+  }
 
   if(board.board[m->to].side == 1) board.fullMove++;
   if(m->captured.type != NONE) board.halfMove = 0;
@@ -67,7 +75,7 @@ void move(struct move *m){
 
 void initGameLocal(){
   pthread_mutex_init(&mutex, NULL);
-  playingAs = &board.currentSide;
+  boardInfo.playingAs = &board.currentSide;
   moveP = makeMove;
   moves = bestow(50*sizeof(struct move *));
   stackInit(&moveStack, moves, 50);
@@ -91,7 +99,7 @@ void makeMoveReceive(struct move *m){
 
 void initGameOnline(){
   pthread_mutex_init(&mutex, NULL);
-  playingAs = &playingAsMem;
+  boardInfo.playingAs = &playingAsMem;
   moveP = makeMoveSend;
   moves = bestow(50*sizeof(struct move *));
   stackInit(&moveStack, moves, 50);

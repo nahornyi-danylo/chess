@@ -2,20 +2,18 @@
 
 struct board board = {0};
 
-char *moveTypeRepr[] = {"MOVE", "CAPTURE", "PROMOTION_Q", "PROMOTION_N", "PROMOTION_R", "PROMOTION_B", "EN_PASSANT", "DOUBLE_PAWN", "CASTLE_K", "CASTLE_Q"};
-
-static const int ROOK_DR[4] = { +1, -1,  0,  0 };
-static const int ROOK_DF[4] = {  0,  0, +1, -1 };
-static const int BISHOP_DR[4] = { +1, +1, -1, -1 };
-static const int BISHOP_DF[4] = { +1, -1, +1, -1 };
-static const int KNIGHT_DR[8] = { 2, 2, 1, 1, -1, -1, -2, -2 };
-static const int KNIGHT_DF[8] = { 1, -1, 2, -2, 2, -2, 1, -1 };
-static const int ADJACENT_DR[8] = {-1, -1, -1, 0, 0, 1, 1, 1};
-static const int ADJACENT_DF[8] = {-1, 0, 1, 1, -1, -1, 0, 1};
+static const int ROOK_DR[4]     = {+1, -1, +0, +0};
+static const int ROOK_DF[4]     = {+0, +0, +1, -1};
+static const int BISHOP_DR[4]   = {+1, +1, -1, -1};
+static const int BISHOP_DF[4]   = {+1, -1, +1, -1};
+static const int KNIGHT_DR[8]   = {+2, +2, +1, +1, -1, -1, -2, -2};
+static const int KNIGHT_DF[8]   = {+1, -1, +2, -2, +2, -2, +1, -1};
+static const int ADJACENT_DR[8] = {-1, -1, -1, +0, +0, +1, +1, +1};
+static const int ADJACENT_DF[8] = {-1, +0, +1, +1, -1, -1, +0, +1};
 
 // 0 1 -> normal attacks 2 3 -> en passants
-static const int PAWN_ATTACKS_DF[4] = {-1, 1, -1, 1};
-static const int PAWN_ATTACKS_DR[4] = {1, 1, 0, 0};
+static const int PAWN_ATTACKS_DF[4] = {-1, +1, -1, +1};
+static const int PAWN_ATTACKS_DR[4] = {+1, +1, +0, +0};
 
 #define isOnBoard(x) (x<64 && x>=0)
 #define isOnBoard2d(x) (x<8 && x>=0)
@@ -247,7 +245,6 @@ void undoMove(struct move *move){
 }
 
 int tryMove(struct move *move){
-
   int side = board.currentSide;
   makeMove(move);
 
@@ -448,8 +445,6 @@ static int calculateCandidatesKnight(int pos, struct move *mlist, int mlistIndex
   return idx;
 }
 
-// yes, this is the same as for bishop, but with a different array.
-// no, I'll not optimize this for the sake of having a func * array.
 static int calculateCandidatesRook(int pos, struct move *mlist, int mlistIndex){
   int opponent = 1-board.board[pos].side;
 
@@ -564,6 +559,7 @@ static int calculateCandidatesKing(int pos, struct move *mlist, int mlistIndex){
   return idx;
 }
 
+
 int (*calculateCandidates[])(int, struct move *, int) = {
   calculateCandidatesNone,
   calculateCandidatesPawn,
@@ -573,7 +569,6 @@ int (*calculateCandidates[])(int, struct move *, int) = {
   calculateCandidatesQueen,
   calculateCandidatesKing
 };
-
 
 int generateAllLegalMoves(struct move *mList){
   int accum = 0;

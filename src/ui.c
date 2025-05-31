@@ -80,7 +80,6 @@ void uiCloseContext(){
   relinquish(lastContext);
 }
 
-// TODO handle out-of-bounds behavior (scrollbars/cutoff)
 void uiAttach(uiElement *element){
   if(!context.top){
     LOG("No context to attach to\n");
@@ -108,7 +107,7 @@ uiScheme uiFinalizeUI(){
 
   queue q;
   // I don't want to implement a standalone dynamic array right now, and it's basically the same
-  // the pupropse is that I need to dequeue for BFS, and store it in another dyn array
+  // the purpose is that I need to dequeue for BFS, and store it in another dyn array
   queue q2;
   queueInit(&q);
   queueInit(&q2);
@@ -160,6 +159,7 @@ void uiDrawUI(uiScheme scheme){
 }
 
 void uiHandleState(uiScheme scheme){
+  static uiElement *last = NULL;
   Vector2 mousepos = GetMousePosition();
   unsigned permissions = 0b1111;
 
@@ -182,7 +182,17 @@ again:
       }
     }
   }
-  
+  if(last != current){
+    while(last){
+      if(last->handlerBackout){
+        last->handlerBackout(last);
+      }
+
+      last = last->parent;
+    }
+  }
+
+  last = current;
   // traverse back whilst calling handlers with appropriate permission mask
   while(current){
     if(permissions & current->handledState && current->handlerFunction){

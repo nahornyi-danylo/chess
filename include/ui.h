@@ -44,7 +44,7 @@ typedef struct uiElement_{
   }elementInItself;
   
   // bitmap of state handlers
-  // from msb to lsb: mouse presses, m wheel up m wheel down, hover.
+  // from msb to lsb: button presses, m wheel vertical m wheel horizontal, hover.
   // when such an event occurs, to the elements on the current mouse pos
   // is given the contrlot flow for maximum flexibility, from leaf nodes to roots
   // in that order. If an event is handled at a higher depth, the corresponding
@@ -53,7 +53,12 @@ typedef struct uiElement_{
   // these restrictions are not inforced. The handler function gets the
   // uiElement *, and the allowed bitmap.
   unsigned handledState : 4;
+#define H_BUTTON_IO 0b1000
+#define H_MWHEEL_V  0b0100
+#define H_MWHEEL_H  0b0010
+#define H_HOVER     0b0001
   void (*handlerFunction)(unsigned, struct uiElement_ *);
+  void (*handlerBackout)(struct uiElement_ *);
 
 
   int numberOfChildren;

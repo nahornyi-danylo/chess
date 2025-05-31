@@ -8,13 +8,14 @@
 #define LOG_PREFIX "client"
 #include "../include/common.h"
 #include "../include/chess.h"
+#include "../include/chessUI.h"
 #include "../include/game.h"
 #include "../include/connection.h"
 
 extern struct board board;
-int serverSocket;
 extern pthread_mutex_t mutex;
-extern int *playingAs;
+extern struct drawInfo boardInfo;
+int serverSocket;
 char buf[256];
 
 int initConnection(const char *ip, const char *port){
@@ -31,7 +32,7 @@ int initConnection(const char *ip, const char *port){
     return 1;
   }
 
-  /* loop through all the results and connect to the first we can */
+  // loop through all the results and connect to the first we can
   for(p = servinfo; p != NULL; p = p->ai_next){
     if((serverSocket = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1){
       LOG("socket error:\n");
@@ -62,9 +63,10 @@ int initConnection(const char *ip, const char *port){
 
   freeaddrinfo(servinfo);
 
+  // receive the init msg
   recvC(serverSocket, buf, 255, 0);
   if(buf[0] == 'i'){
-    *playingAs = buf[1]-'0';
+    *boardInfo.playingAs = buf[1]-'0';
   }
   return 0;
 }
