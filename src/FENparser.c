@@ -41,7 +41,7 @@ int parseFENpieces(const char *fen) {
         board.board[sq] = FENmap[id];
         // if this is a king, record its square
         if (FENmap[id].type == KING) {
-          board.kingPos[ FENmap[id].side ] = sq;
+          board.kingPos[FENmap[id].side] = sq;
         }
         file++;
       }
@@ -127,8 +127,7 @@ int loadFEN(const char *str){
     board.fullMove = 1;
   }
 
-  LOG("FEN parsed successfully: hm=%d fm=%d\n",
-      board.halfMove, board.fullMove);
+  LOG("FEN parsed successfully\n");
   return 0;
 fail:
   LOG("Error while loading FEN\n");

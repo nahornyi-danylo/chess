@@ -71,38 +71,48 @@ int initConnection(const char *ip, const char *port){
   return 0;
 }
 
-void interpretMsg(){
+void interpretMsg(int n){
   struct move m;
-  if(buf[0] == 'd'){
-    LOG("move disapproved, reloading FEN\n");
-    loadFEN(((char *)buf)+1);
-  }
-  else if(buf[0] == 'a'){
-    m = *(struct move *)(buf+1);
-    LOG("move approved\n");
-    makeMoveReceive(&m);
-  }
-  else if(buf[0] == 'm'){
-    m = *(struct move *)(buf+1);
-    LOG("received a move\n");
-    makeMoveReceive(&m);
-  }
-  else if(buf[0] == 'f'){
-    LOG("Game finished!\n");
-    switch(buf[1]){
-      case '0':
-        LOG("White won!\n");
+  int offset = 0;
+  while(offset < n){
+    switch(buf[0 + offset]){
+      case 'd':
+        LOG("move disapproved, reloading FEN\n");
+        loadFEN(((char *)buf)+1);
+        offset += n;
         break;
-      case '1':
-        LOG("Black won!\n");
+      case 'a':
+        m = *(struct move *)(buf+1);
+        LOG("move approved\n");
+        makeMoveReceive(&m);
+        offset += sizeof(struct move)+1;
         break;
-      case '2':
-        LOG("Draw!\n");
+      case 'm':
+        m = *(struct move *)(buf+1);
+        LOG("received a move\n");
+        makeMoveReceive(&m);
+        offset += sizeof(struct move)+1;
+        break;
+      case 'f':
+        LOG("Game finished!\n");
+        switch(buf[1 + offset]){
+          case '0':
+            LOG("White won!\n");
+            break;
+          case '1':
+            LOG("Black won!\n");
+            break;
+          case '2':
+            LOG("Draw!\n");
+            break;
+        }
+        offset += 2;
+        break;
+
+      default:
+        LOG("received junk\n");
         break;
     }
-  }
-  else{
-    LOG("received junk\n");
   }
 }
 
@@ -111,7 +121,7 @@ void *clientConnectionThread(void *ptr){
   while(1){
     n = recvC(serverSocket, buf, 255, 0);
     if(n>0){
-      interpretMsg();
+      interpretMsg(n);
     }
     else {
       LOG("connetion terminated\n");
