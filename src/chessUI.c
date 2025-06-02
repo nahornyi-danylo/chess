@@ -6,7 +6,6 @@
 #include "../include/game.h"
 #include <pthread.h>
 
-// nobody will have more than one board, so I MUST hardcode on a single global instance
 extern struct board board;
 extern pthread_mutex_t mutex;
 
