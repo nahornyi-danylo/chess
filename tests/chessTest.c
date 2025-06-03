@@ -1,3 +1,5 @@
+#include <assert.h>
+#include <time.h>
 #include <ctype.h>
 #include "../include/chess.h"
 #define LOG_PREFIX "chess test"
@@ -43,7 +45,7 @@ unsigned long long perft_divide(int depth) {
   return total;
 }
 
-void drawBoard(){
+void printBoard(){
   for(int i = 7; i>-1; i--){
     for(int j = 0; j<8; j++){
       char c;
@@ -80,25 +82,77 @@ void drawBoard(){
 }
 
 int main(){
+  int time0 = time(NULL);
   char buf[128];
-  int n = 0;
-  //loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-  loadFEN("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - ");
-  n = getCurrentFEN(buf);
-  for(int i = 0; i<n; i++){
-    printf("%c", buf[i]);
-  }
-  printf("\n");
+  loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+  printBoard();
+  assert(perft_divide(1) == 20);
+  LOG("depth 1 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  assert(perft_divide(2) == 400);
+  LOG("depth 2 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  assert(perft_divide(3) == 8902);
+  LOG("depth 3 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  assert(perft_divide(4) == 197281);
+  LOG("depth 4 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  assert(perft_divide(5) == 4865609);
+  LOG("depth 5 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  assert(perft_divide(6) == 119060324);
+  LOG("depth 6 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  //assert(perft_divide(7) == 3195901860);
+  //LOG("depth 7 passed and it took %lus\n", time(NULL)-time0);
+  //time0 = time(NULL);
+  //assert(perft_divide(8) == 84998978956);
+  //LOG("depth 8 passed and it took %lus\n", time(NULL)-time0);
+  //time0 = time(NULL);
+  LOG("test for rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 passed successfully\n");
 
-  drawBoard();
-  perft_divide(8);
+  loadFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
+  printBoard();
+  assert(perft_divide(1) == 48);
+  LOG("depth 1 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  assert(perft_divide(2) == 2039);
+  LOG("depth 2 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  assert(perft_divide(3) == 97862);
+  LOG("depth 3 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  assert(perft_divide(4) == 4085603);
+  LOG("depth 4 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  assert(perft_divide(5) == 193690690);
+  LOG("depth 5 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  //assert(perft_divide(6) == 8031647685);
+  //LOG("depth 6 passed and it took %lus\n", time(NULL)-time0);
+  //time0 = time(NULL);
+  LOG("test for r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -  passed successfully\n");
 
-  //loadFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
-  //n = getCurrentFEN(buf);
-  //for(int i = 0; i<n; i++){
-    //printf("%c", buf[i]);
-  //}
-  //printf("\n");
-  //drawBoard();
-  //perft_divide(6);
+  loadFEN("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
+  printBoard();
+  assert(perft_divide(1) == 14);
+  LOG("depth 1 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  assert(perft_divide(2) == 191);
+  LOG("depth 2 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  assert(perft_divide(3) == 2812);
+  LOG("depth 3 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  assert(perft_divide(4) == 43238);
+  LOG("depth 4 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  assert(perft_divide(5) == 674624);
+  LOG("depth 5 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  assert(perft_divide(6) == 11030083);
+  LOG("depth 6 passed and it took %lus\n", time(NULL)-time0);
+  time0 = time(NULL);
+  LOG("test for 8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1 passed successfully\n");
 }
