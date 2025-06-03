@@ -31,7 +31,10 @@ int main(int argc, char **argv){
     if(!initConnection(argv[1], argv[2])){
       pthread_create(&connectionThread, NULL, clientConnectionThread, NULL);
     }
-    else initGameLocal();
+    else{
+      cleanGameData();
+      initGameLocal();
+    }
   }
   else{
     initGameLocal();

@@ -32,7 +32,7 @@ void printOutMoveList(){
   }
 }
 
-void move(struct move *m){
+void moveLocal(struct move *m){
   struct move mlist[256];
   struct move *allocatedMove = bestow(sizeof(*allocatedMove));
   *allocatedMove = *m;
@@ -40,7 +40,7 @@ void move(struct move *m){
   board.halfMove++;
   if(board.board[m->from].type == PAWN) board.halfMove = 0;
 
-  moveP(allocatedMove);
+  makeMove(allocatedMove);
   push(allocatedMove, &moveStack);
 
   // last move highlights
@@ -76,7 +76,7 @@ void move(struct move *m){
 void initGameLocal(){
   pthread_mutex_init(&mutex, NULL);
   boardInfo.playingAs = &board.currentSide;
-  moveP = makeMove;
+  moveP = moveLocal;
   moves = bestow(50*sizeof(struct move *));
   stackInit(&moveStack, moves, 50);
 }
@@ -90,11 +90,10 @@ void makeMoveSend(struct move *m){
 
 void makeMoveReceive(struct move *m){
   pthread_mutex_lock(&mutex);
-  moveP = makeMove;
+  moveP = moveLocal;
   move(m);
   moveP = makeMoveSend;
   pthread_mutex_unlock(&mutex);
-
 }
 
 void initGameOnline(){
@@ -103,6 +102,10 @@ void initGameOnline(){
   moveP = makeMoveSend;
   moves = bestow(50*sizeof(struct move *));
   stackInit(&moveStack, moves, 50);
+}
+
+void move(struct move *m){
+  moveP(m);
 }
 
 
