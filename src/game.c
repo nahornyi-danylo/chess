@@ -90,9 +90,7 @@ void makeMoveSend(struct move *m){
 
 void makeMoveReceive(struct move *m){
   pthread_mutex_lock(&mutex);
-  moveP = moveLocal;
-  move(m);
-  moveP = makeMoveSend;
+  moveLocal(m);
   pthread_mutex_unlock(&mutex);
 }
 
